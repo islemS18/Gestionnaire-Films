@@ -1,0 +1,280 @@
+---
+title: "TD5"
+subtitle: "Rendu du TD"
+format: 
+    html:
+        toc : true
+        toc-depth: 3
+        embed-resources: true
+author : "Souissi Islem"
+date : "03 Novembre 2026"
+---
+1 – Approximation d’une matrice par une matrice de rang k
+
+Exercice1 : 
+On Calcule la meilleure approximation de A par la matrice de rang k : 
+
+```{r}
+approx <- function (m , k ){
+    decomp= svd(m)
+    k=min ( k, length(decomp$d))
+    U_k <- decomp$u[, 1:k, drop = FALSE]
+    d_k <- decomp$d[1:k]
+    V_k <- decomp$v[, 1:k, drop = FALSE]
+    A_k <- U_k %*% diag(d_k, nrow = k, ncol = k) %*% t(V_k)
+    return(A_k)
+}
+
+```
+
+Pour la matrice A : 
+```{r}
+A<- matrix(c(1,3 ,-2 ,7 ,1 ,1 ,2 ,6 ,-1 ,2 ,4 ,-1 ,1 ,5 ,0 ,2), ncol=4, byrow=TRUE)
+A
+approx(A, 3)
+```
+
+La distance entre la matrice A et son approximation: 
+Norme De Frobenuis: 
+
+Pour l'approximation de  rang=1
+La distance : 
+```{r}
+A_1 <- approx(A, k = 1)
+dist_1 <- norm(A-A_1 , type="F")
+dist_1
+```
+
+Pour l'approximation de rang=2: 
+La distance: 
+
+```{r}
+A_2 <- approx(A, k = 2)
+dist_2 <- norm(A-A_2 , type="F")
+dist_2
+```
+
+Pour l'approximation de rang=3: 
+La distance: 
+
+```{r}
+A_3 <- approx(A, k = 3)
+dist_3 <- norm(A-A_3 , type="F")
+dist_3
+```
+
+=> si k1 < k2 alors dist_1 > dist_2 :  la distance diminue lorsque le rang augmente 
+
+2 – Approximation d’une image
+On considère une image en niveau de gris représentée par une matrice A de taille m×n. On souhaite approximer
+cette image par une matrice de rang k.
+
+Exercice2 : 
+
+```{r}
+if (!requireNamespace("png", quietly = TRUE)) {
+  install.packages("png")
+}
+
+library(png)
+
+approx_img <- function(fichier, k) {
+    img_approx <- approx(fichier, k)
+    return(img_approx)
+}
+
+```
+
+
+```{r}
+img = readPNG("C:/Users/HP/OneDrive/Desktop/S.I/L3 UNICA Miage/R Langage/Gestionnaire_Film_R/Gestion_De_Film/cameraman.png")
+img_approx <- approx_img(img, 50)
+```
+
+
+```{r}
+par(mfrow = c(1, 2))
+image(t(img[nrow(img):1, ]),
+      col = gray((0:255)/255),
+      axes = FALSE,
+      main = "Originale")
+
+image(t(img_approx[nrow(img_approx):1, ]),
+      col = grey((0:255)/255),
+      axes = FALSE,
+      main= "Compressée")
+```
+
+Plus k est petit, plus l'approximation est généralement éloignée de l'originale. Plus k est grand, plus elle est fidèle
+
+Exercice3: 
+
+En algèbre linéaire, l’énergie d’une matrice est formellement représentée par sa norme de Frobenius au carré
+(||A||²F), c’est à dire la somme des carrés de tous les éléments de la matrice
+
+Frobenuis:
+```{r}
+energie_Frobenuis <- function(img){
+    return(sum(img^2))
+}
+energie_Frobenuis(img)
+
+energie_SVD <- function(img){
+    svd_img <- svd(img)
+    return(sum(svd_img$d^2))
+}
+energie_SVD(img )
+```
+
+Comparaison: 
+
+```{r}
+all.equal(energie_SVD(img ), energie_Frobenuis(img))
+```
+
+L'energie de l'approximation de l'image de rang k : 
+
+```{r}
+img_approx <- approx_img(img, 10)
+energie_Frobenuis <- function(img_approx){
+    return(sum(img_approx^2))
+}
+energie_Frobenuis(img_approx)
+
+energie_SVD <- function(img_approx){
+    svd_img <- svd(img_approx)
+    return(sum(svd_img$d^2))
+}
+energie_SVD(img_approx )
+```
+
+Comparaison: 
+
+```{r}
+all.equal(energie_SVD(img_approx ), energie_Frobenuis(img_approx))
+```
+
+
+```{r}
+energy_ratio <- function (A, k ){
+    svd_img <- svd(img)
+    energie_totale <- sum(svd_img$d^2)
+    energie_k <- sum(svd_img$d[1:k]^2)
+    ratio <- energie_k / energie_totale
+    return(ratio * 100)
+
+}
+```
+
+L'energy ratio: 
+
+```{r}
+energy_ratio(A, 13)
+
+```
+
+La valeur minimale de k pour laquelle le ratio de conservation de l’énergie est supérieur à 90% : 
+```{r}
+k90 <- which(sapply(1:nrow(A), function(k) energy_ratio(A, k) > 90))[1]
+k90
+
+```
+
+La valeur minimale de k pour laquelle le ratio de conservation de l’énergie est supérieur à 95% : 
+
+```{r}
+k95 <- which(sapply(1:nrow(A), function(k) energy_ratio(A, k) > 95))[1]
+k95
+```
+
+La valeur minimale de k pour laquelle le ratio de conservation de l’énergie est supérieur à 99% : 
+```{r}
+k99 <- which(sapply(1:nrow(A), function(k) energy_ratio(A, k) > 99))[1]
+k99
+```
+
+EXEMPLE D'APPLICATION: 3 – Application aux algorithmes de recommandation
+
+Exercice 4:
+Les données à stocker : 
+```{r}
+R <- read.csv("C:/Users/HP/OneDrive/Desktop/S.I/L3 UNICA Miage/R Langage/Gestionnaire_Film_R/Gestion_De_Film/Films.csv", header=TRUE)
+```
+
+Calculer la moyenne de chaque utilisateur
+
+```{r}
+R <- as.matrix(R[, -1])
+moyennes <- rowMeans(R, na.rm = TRUE)
+
+Rcentree <- R - moyennes
+Rcentree[is.na(Rcentree)] <- 0
+
+```
+
+Rcentree en SVD : 
+```{r}
+Rcentree_svd <- svd(Rcentree)
+
+```
+
+ L’approximation de rang k=5 de la matrice Rcentrée : 
+
+```{r}
+k <- 5
+
+Uk <- Rcentree_svd $u[, 1:k]
+Sigma_k <- diag(Rcentree_svd$d[1:k])
+Vk <- Rcentree_svd$v[, 1:k]
+
+Rapprox_centree <- Uk %*% Sigma_k %*% t(Vk)
+```
+
+Approximation Rpred:
+
+```{r}
+Rpred <- Rapprox_centree + moyennes
+Rpred[Rpred < 1] <- 1
+Rpred[Rpred > 5] <- 5
+
+```
+
+Fonction de recommendation : 
+```{r}
+Recommender_films <- function (user , m ){
+    prediction <- Rpred [user, ]
+
+    NoSeen_film <- which ( is.na(R[user, ]))
+
+    NoSeen_pred <- prediction[NoSeen_film]
+
+    classement <- order(NoSeen_pred, decreasing = TRUE)
+
+    Best_film <- NoSeen_film[classement[seq_len(min(m, length(classement)))]]
+    
+    return ( Best_film)
+}
+```
+
+Test: 
+
+```{r}
+Recommender_films(1,5)
+Recommender_films(4,6)
+```
+
+RMSE : l'écart entre les notes réelles et les notes prédites.
+
+```{r}
+observations <- !is.na(R)  #enlever les films non evalués par le user
+rmse <- sqrt(mean((R[observations] - Rpred[observations])^2))
+rmse
+```
+
+La RMSE donne un resultat de 0.1814387 : Cela indique une faible erreur entre les notes réelles et les notes reconstruites par le systeme
+
+
+```{r}
+# mais on peut distinguer ça sauf pour ce fichier ! En effet : le fichier donné dés le debut contient deja les resultats que le systeme vient de les predicter ! ce qui ne peut pas garantir la fiabilité et performance du systeme car il a deja ete entrainer sur ce fichier 
+#Entrainer un fichier sur des données de depart ne garantit jamais la fiabilité et la performance du systeme 
+```
